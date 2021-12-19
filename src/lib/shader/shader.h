@@ -1,21 +1,24 @@
-/* shader.hpp */
+/* shader.h */
 
 #ifndef SHADER_HEADER_H
 #define SHADER_HEADER_H
 
+#include <glad/glad.h>
 #include <string>
 
 class Shader
 {
 public:
-  unsigned int ID;
+  GLuint ID;
 
   // Constructor & destructor
   Shader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
   ~Shader();
 
-  // Activate shader
-  void use();
+  // Activate & Deactivate shader
+  void activate();
+  void deactivate();
+
   // Utility uniform methods
   void setBool(const std::string& name, bool value) const;
   void setInt(const std::string& name, int value) const;

@@ -1,6 +1,6 @@
 #include <glad/glad.h>
 
-#include "shader.hpp"
+#include "shader.h"
 
 #include <iostream>
 #include <fstream>
@@ -80,12 +80,16 @@ Shader::Shader(const std::string& vertexShaderPath, const std::string& fragmentS
   glDeleteShader(fragmentShader);
 }
 Shader::~Shader() {
-  glDeleteProgram(ID);
+  deactivate();
 }
 
-void Shader::use()
+void Shader::activate()
 {
   glUseProgram(ID);
+}
+
+void Shader::deactivate() {
+  glDeleteProgram(ID);
 }
 
 void Shader::setBool(const std::string& name, bool value) const

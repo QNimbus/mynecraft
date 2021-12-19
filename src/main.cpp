@@ -3,7 +3,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "lib/shader/shader.hpp"
+#include "lib/shader/shader.h"
+#include "lib/shader/VAO.h"
+#include "lib/shader/VBO.h"
+#include "lib/shader/EBO.h"
 
 using namespace std;
 
@@ -11,6 +14,23 @@ using namespace std;
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 800
+
+// Vertices for the triangles
+GLfloat vertices[] = {
+  -0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f,      // Lower left corner
+   0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f,      // Lower right corner
+   0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f,   // Upper corner
+   -0.5f / 2, 0.5f * float(sqrt(3)) / 6, 0.0f,  // Inner left
+   0.5f / 2, 0.5f * float(sqrt(3)) / 6, 0.0f,   // Inner right
+   0.0f, -0.5f * float(sqrt(3)) / 3, 0.0f,      // Inner bottom
+};
+
+// Indices for the vertex ordering
+GLuint indices[] = {
+  0, 3, 5, // Lower left triangle
+  2, 3, 4, // Lower right triangle
+  5, 4, 1, // Upper triangle
+};
 
 int main(int argc, char* argv[])
 {
@@ -35,21 +55,6 @@ int main(int argc, char* argv[])
     // Tell GLFW we will be using the CORE profile (since OpenGL 3.2, seeL https://en.wikipedia.org/wiki/OpenGL#OpenGL_3.2)
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLfloat vertices[] = {
-      -0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f, // Lower left corner
-       0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f, // Lower right corner
-       0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f, // Upper corner
-       -0.5f / 2, 0.5f * float(sqrt(3)) / 6, 0.0f, // Inner left
-       0.5f / 2, 0.5f * float(sqrt(3)) / 6, 0.0f, // Inner right
-       0.0f, -0.5f * float(sqrt(3)) / 3, 0.0f, // Inner bottom
-    };
-
-    GLuint indices[] = {
-      0, 3, 5, // Lower left triangle
-      2, 3, 4, // Lower right triangle
-      5, 4, 1, // Upper triangle
-    };
-
     // Initialize window and check for success
     window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Mynecraft", NULL, NULL);
     if (!window)
@@ -71,7 +76,7 @@ int main(int argc, char* argv[])
     const GLubyte* version = glGetString(GL_VERSION);   // Get OpenGL version as a string
     cout << "Mynecraft version: " << APP_VERSION << endl;
     cout << "Renderer: " << renderer << endl;
-    cout << "OpenGL version supported: " << version << endl;
+    cout << "OpenGL version supported: " << version << endl << "--------------" << endl;
 
     // Configure the viewport used by OpenGL in the window
     glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -86,36 +91,21 @@ int main(int argc, char* argv[])
     // Construct shader object
     shader = new Shader("./src/shaders/shader.vs", "./src/shaders/shader.fs");
 
-    // Create reference containers for the Vertex Array Object and the Vertex Buffer Object
-    GLuint VAOs[1], VBOs[1], EBOs[1];
+    // Generate vertex array object and bind it
+    VAO VAO1;
+    VAO1.bind();
 
-    // Generate VAO and VBO with only 1 object each
-    glGenVertexArrays(1, VAOs);
-    glGenBuffers(1, VBOs);
-    glGenBuffers(1, EBOs);
+    // Generate vertex and element buffer objects
+    VBO VBO1(vertices, sizeof(vertices));
+    // Generates Element Buffer Object and links it to indices
+    EBO EBO1(indices, sizeof(indices));
 
-    // Make the VAO the current Vertex Array Object by binding it
-    glBindVertexArray(VAOs[0]);
-
-    // Bind the VBO specifying it's a GL_ARRAY_BUFFER
-    glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-    // Introduce the vertices into the VBO
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // Bind the EBO specifying it's a GL_ELEMENT_ARRAY_BUFFER
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[0]);
-    // Introduce the indices into the EBO
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    // Configure the Vertex Attribute so that OpenGL knows how to read the VBO
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    // Enable the Vertex Attribute so that OpenGL knows to use it
-    glEnableVertexAttribArray(0);
-
-    // Bind both the VBO and VAO to 0 so that we don't accidentally modify the VAO and VBO we created
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    // Links VBO to VAO
+    VAO1.linkVBO(VBO1, 0);
+    // Unbind all to prevent accidentally modifying them
+    VAO1.unbind();
+    VBO1.unbind();
+    EBO1.unbind();
 
     // Main event loop
     while (!glfwWindowShouldClose(window))
@@ -125,11 +115,13 @@ int main(int argc, char* argv[])
       // Actually perform clearing of the buffers
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-      shader->use();
+      // Tell OpenGL which Shader Program we want to use
+      shader->activate();
 
-      glBindVertexArray(VAOs[0]);
+      // Bind the VAO so OpenGL knows to use it
+      VAO1.bind();
 
-      // glDrawArrays(GL_TRIANGLES, 0, 3);
+      // Draw primitives, number of indices, datatype of indices, index of indices
       glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
 
       // Swap the back buffer with the front buffer
@@ -139,12 +131,12 @@ int main(int argc, char* argv[])
       glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, VAOs);
-    glDeleteBuffers(1, VBOs);
-    glDeleteBuffers(1, EBOs);
+    VAO1.remove();
+    VBO1.remove();
+    EBO1.remove();
 
     // Free shader object
-    delete shader;
+    shader->deactivate();
 
     // Destruct window prior to ending program
     glfwDestroyWindow(window);
