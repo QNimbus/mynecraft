@@ -1,0 +1,215 @@
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
+#include "lib/shader/shader.hpp"
+
+#include <chrono>
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
+
+void error_callback(int error, const char *description);
+
+int main(int argc, char *argv[])
+{
+  GLFWwindow *window;
+
+  auto t_start = std::chrono::high_resolution_clock::now();
+
+  // glfw: initialize and configure
+  // ------------------------------
+
+  if (!glfwInit())
+    exit(EXIT_FAILURE);
+
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
+  // ------------------------------
+
+  /* Create a windowed mode window and its OpenGL context */
+  window = glfwCreateWindow(1280, 1024, "Hello World", NULL, NULL);
+  if (!window)
+  {
+    glfwTerminate();
+    exit(EXIT_FAILURE);
+  }
+
+  glfwMakeContextCurrent(window);
+  glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+  // glad: load all OpenGL function pointers
+  // ---------------------------------------
+  if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+  {
+    exit(EXIT_FAILURE);
+  }
+
+  // Set error callback
+  glfwSetErrorCallback(error_callback);
+
+  glfwSetKeyCallback(window, key_callback);
+
+  Shader shader("..\\src\\shaders\\shader.vs", "..\\src\\shaders\\shader.fs");
+  shader.use();
+  // // build and compile our shader program
+  // // ------------------------------------
+  // // vertex shader
+  // unsigned int vertexShader;
+  // vertexShader = glCreateShader(GL_VERTEX_SHADER);
+
+  // glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+  // glCompileShader(vertexShader);
+
+  // // check for shader compile errors
+  // int success;
+  // char infoLog[512];
+  // glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+
+  // if (!success)
+  // {
+  //   glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+  //   printf("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n%s", infoLog);
+  // }
+
+  // // fragment shader
+  // unsigned int fragmentShader;
+  // fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+  // glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+  // glCompileShader(fragmentShader);
+
+  // glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+
+  // if (!success)
+  // {
+  //   glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+  //   printf("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n%s", infoLog);
+  // }
+
+  // // link shaders
+  // unsigned int shaderProgram;
+  // shaderProgram = glCreateProgram();
+
+  // glAttachShader(shaderProgram, vertexShader);
+  // glAttachShader(shaderProgram, fragmentShader);
+  // glLinkProgram(shaderProgram);
+  // glUseProgram(shaderProgram);
+
+  // // check for linking errors
+  // glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+  // if (!success)
+  // {
+  //   glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+  //   printf("ERROR::SHADER::PROGRAM::COMPILATION_FAILED\n%s", infoLog);
+  // }
+
+  // set up vertex data (and buffer(s)) and configure vertex attributes
+  // ------------------------------------------------------------------
+  float vertices[] = {
+      -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f,  // top left - red
+      0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f,   // top right - green
+      0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f,  // bottom right - blue
+      -0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 1.0f, // bottom left - white
+  };
+  unsigned int indices[] = {
+      // note that we start from 0!
+      0, 1, 2, // first Triangle
+      2, 3, 0  // second Triangle
+  };
+  unsigned int VBO, VAO, EBO;
+  glGenVertexArrays(1, &VAO);
+  glGenBuffers(1, &VBO);
+  glGenBuffers(1, &EBO);
+
+  // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+  glBindVertexArray(VAO);
+
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+  // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+  // glEnableVertexAttribArray(0);
+
+  // GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+                        6 * sizeof(float), 0);
+
+  // GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
+                        6 * sizeof(float), (void *)(3 * sizeof(float)));
+
+  // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+  // glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  // remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
+  //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+  // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
+  // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+  // glBindVertexArray(0);
+
+  // uncomment this call to draw in wireframe polygons.
+  // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+  // Iniitialize uniform variable triangleColor
+  // GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
+
+  // get version info
+  const GLubyte *renderer = glGetString(GL_RENDERER); // get renderer string
+  const GLubyte *version = glGetString(GL_VERSION);   // version as a string
+  printf("Renderer: %s\n", renderer);
+  printf("OpenGL version supported %s\n", version);
+
+  while (!glfwWindowShouldClose(window))
+  {
+    // Set the color of the triangle
+    // auto t_now = std::chrono::high_resolution_clock::now();
+    // float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
+
+    // glUniform3f(uniColor, (sin(time * 4.0f) + 1.0f) / 2.0f, 0.0f, (cos(time * 4.0f) + 1.0f) / 2.0f);
+    // render
+    // ------
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+  }
+
+  glfwDestroyWindow(window);
+
+  glfwTerminate();
+
+  exit(EXIT_SUCCESS);
+}
+
+// glfw: whenever the window size changed (by OS or user resize) this callback function executes
+// ---------------------------------------------------------------------------------------------
+void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+{
+  // make sure the viewport matches the new window dimensions; note that width and
+  // height will be significantly larger than specified on retina displays.
+  glViewport(0, 0, width, height);
+}
+
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+    glfwSetWindowShouldClose(window, GLFW_TRUE);
+}
+
+void error_callback(int error, const char *description)
+{
+  fprintf(stderr, "Error: %s\n", description);
+}

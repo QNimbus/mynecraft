@@ -1,0 +1,52 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cppbuild",
+			"label": "build",
+			"command": "C:/msys64/mingw64/bin/g++.exe",
+			"args": [
+				"-fdiagnostics-color=always",
+				"-std=c++14",
+				"-O3",
+				"-g",
+				"-Wall",
+				"-Wno-unused",
+				"-Ilib\\glad\\include",
+				"-Ilib\\glfw\\include",
+				// "src\\main.cpp",
+				// "${workspaceFolder}\\src\\*.cpp",
+				"${workspaceFolder}\\src\\main.cpp",
+				"${workspaceFolder}\\src\\lib\\shader\\*.cpp",
+				"-o",
+				"${workspaceFolder}\\bin\\game.exe",
+				"lib\\glfw\\src\\libglfw3.a",
+				"lib\\glad\\src\\glad.o",
+				"-lgdi32",
+				"-lopengl32",
+				"-lm"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "compiler: C:/msys64/mingw64/bin/g++.exe"
+		},
+		{
+			"label": "make",
+			"type": "shell",
+			"options": {
+				"shell": {
+					"executable": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+				}
+			},
+			"command": "C:\\msys64\\mingw64\\bin\\mingw32-make.exe -C ${workspaceFolder} clean all"
+		}
+	]
+}
