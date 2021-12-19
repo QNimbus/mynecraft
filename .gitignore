@@ -1,1 +1,5 @@
+# Compiled binaries
 bin/
+
+# Object files
+*.o
