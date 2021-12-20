@@ -2,11 +2,12 @@
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <stb/stb_image.h>
 
-#include "lib/shader/shader.h"
-#include "lib/shader/VAO.h"
-#include "lib/shader/VBO.h"
-#include "lib/shader/EBO.h"
+#include "gfx/shader/shader.h"
+#include "gfx/shader/VAO.h"
+#include "gfx/shader/VBO.h"
+#include "gfx/shader/EBO.h"
 
 using namespace std;
 
@@ -17,20 +18,17 @@ using namespace std;
 
 // Vertices for the triangles
 GLfloat vertices[] = {
-  // Coordinates ----------------------------------- Colors 
-  -0.5f, -0.5f * float(sqrt(3)) / 3,     0.0f,    0.8f, 0.3f,  0.02f,     // Lower left corner
-   0.5f, -0.5f * float(sqrt(3)) / 3,     0.0f,    0.8f, 0.3f,  0.02f,     // Lower right corner
-   0.0f,  0.5f * float(sqrt(3)) * 2 / 3, 0.0f,    1.0f, 0.6f,  0.32f,     // Upper corner
-  -0.25f, 0.5f * float(sqrt(3)) / 6,     0.0f,    0.9f, 0.45f, 0.17f,     // Inner left
-   0.25f, 0.5f * float(sqrt(3)) / 6,     0.0f,    0.9f, 0.45f, 0.17f,     // Inner right
-   0.0f, -0.5f * float(sqrt(3)) / 3,     0.0f,    0.8f, 0.3f,  0.02f,     // Inner bottom
+  // Coordinates ------- Colors 
+  -0.5f, -0.5f, 0.0f,    0.8f, 0.3f,  0.02f,     // Lower left corner
+   0.5f, -0.5f, 0.0f,    0.8f, 0.3f,  0.02f,     // Lower right corner
+  -0.5f,  0.5f, 0.0f,    1.0f, 0.6f,  0.32f,     // Upper left corner
+   0.5f,  0.5f, 0.0f,    1.0f, 0.6f,  0.32f,     // Upper right corner
 };
 
 // Indices for the vertex ordering
 GLuint indices[] = {
-  0, 3, 5, // Lower left triangle
-  2, 3, 4, // Lower right triangle
-  5, 4, 1, // Upper triangle
+  0, 1, 2, // Lower triangle
+  2, 3, 1, // Upper triangle
 };
 
 int main(int argc, char* argv[])
@@ -90,7 +88,7 @@ int main(int argc, char* argv[])
     glfwSwapBuffers(window);
 
     // Construct shader object
-    shader = new Shader("./src/shaders/shader.vs", "./src/shaders/shader.fs");
+    shader = new Shader("./src/resources/shaders/shader.vs", "./src/resources/shaders/shader.fs");
 
     // Generate vertex array object and bind it
     VAO VAO1;
@@ -113,7 +111,7 @@ int main(int argc, char* argv[])
     // Create/define uniform 'scale' for use in shader
     GLuint uniID = glGetUniformLocation(shader->ID, "scale");
 
-    float fScale = 0.0f;
+    float fScale = 1.0f; // 0.0f;
     float tLast = 0.0f;
 
     // Main event loop
@@ -127,19 +125,20 @@ int main(int argc, char* argv[])
       // Tell OpenGL which Shader Program we want to use
       shader->activate();
 
-      if (glfwGetTime() - tLast > (1.0f / 60.0f)) {
-        fScale += 0.05f;
-        tLast = glfwGetTime();
-      }
+      // if (glfwGetTime() - tLast > (1.0f / 60.0f)) {
+      //   fScale += 0.05f;
+      //   tLast = glfwGetTime();
+      // }
 
       // Initialize uniform value 'scale'
-      glUniform1f(uniID, abs(0.1f + sin(fScale)));
+      // glUniform1f(uniID, abs(0.1f + sin(fScale)));
+      glUniform1f(uniID, fScale);
 
       // Bind the VAO so OpenGL knows to use it
       VAO1.bind();
 
       // Draw primitives, number of indices, datatype of indices, index of indices
-      glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
+      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
       // Swap the back buffer with the front buffer
       glfwSwapBuffers(window);

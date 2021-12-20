@@ -13,7 +13,7 @@ CFLAGS += -Ilib/glad/include -Ilib/glfw/include
 
 CPPFLAGS = -std=c++14 -O3 -g -Wall -Wextra -Wpedantic -Wstrict-aliasing
 CPPFLAGS += -Wno-pointer-arith -Wno-unused-parameter -Wno-unused
-CPPFLAGS += -Ilib/glad/include -Ilib/glfw/include
+CPPFLAGS += -Ilib -Ilib/glad/include -Ilib/glfw/include
 
 LDFLAGS = lib/glad/src/glad.o lib/glfw/src/libglfw3.a -lm
 # LDFLAGS = lib/glad/src/glad.o lib/cglm/libcglm.a lib/glfw/src/libglfw3.a lib/noise/libnoise.a -lm
