@@ -11,24 +11,31 @@
 
 using namespace std;
 
-#define APP_VERSION "0.1.0"
+#define APP_VERSION "0.1.1"
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 800
 
+#define TEXTURE_NR 16
+#define TEXTURE_X1 (float) ((TEXTURE_NR % 16) * (float) 16/256)
+#define TEXTURE_X2 TEXTURE_X1 + (float) 16/256
+
+#define TEXTURE_Y2 (float) 1 - (TEXTURE_NR / 16 * (float) 16/256)
+#define TEXTURE_Y1 TEXTURE_Y2 - (float) 16/256
+
 // Vertices for the triangles
 GLfloat vertices[] = {
-  // Coordinates ------- Colors 
-  -0.5f, -0.5f, 0.0f,    0.8f, 0.3f,  0.02f,     // Lower left corner
-   0.5f, -0.5f, 0.0f,    0.8f, 0.3f,  0.02f,     // Lower right corner
-  -0.5f,  0.5f, 0.0f,    1.0f, 0.6f,  0.32f,     // Upper left corner
-   0.5f,  0.5f, 0.0f,    1.0f, 0.6f,  0.32f,     // Upper right corner
+  // Coordinates ------- Colors ------------ Texture coordinates
+  -0.5f, -0.5f, 0.0f,    0.8f, 0.3f,  0.02f, TEXTURE_X1, TEXTURE_Y1,  // Lower left corner
+  -0.5f,  0.5f, 0.0f,    1.0f, 0.6f,  0.32f, TEXTURE_X1, TEXTURE_Y2,  // Upper left corner
+   0.5f,  0.5f, 0.0f,    1.0f, 0.6f,  0.32f, TEXTURE_X2, TEXTURE_Y2,  // Upper right corner
+   0.5f, -0.5f, 0.0f,    0.8f, 0.3f,  0.02f, TEXTURE_X2, TEXTURE_Y1,  // Lower right corner
 };
 
 // Indices for the vertex ordering
 GLuint indices[] = {
-  0, 1, 2, // Lower triangle
-  2, 3, 1, // Upper triangle
+  0, 2, 1, // Lower triangle
+  0, 3, 2, // Upper triangle
 };
 
 int main(int argc, char* argv[])
@@ -100,8 +107,9 @@ int main(int argc, char* argv[])
     EBO EBO1(indices, sizeof(indices));
 
     // Links VBO to VAO
-    VAO1.linkAttrib(VBO1, 0, 3, GL_FLOAT, 6 * sizeof(float), (void*)0);
-    VAO1.linkAttrib(VBO1, 1, 3, GL_FLOAT, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    VAO1.linkAttrib(VBO1, 0, 3, GL_FLOAT, 8 * sizeof(float), (void*)0);
+    VAO1.linkAttrib(VBO1, 1, 3, GL_FLOAT, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    VAO1.linkAttrib(VBO1, 2, 2, GL_FLOAT, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 
     // Unbind all to prevent accidentally modifying them
     VAO1.unbind();
@@ -110,6 +118,36 @@ int main(int argc, char* argv[])
 
     // Create/define uniform 'scale' for use in shader
     GLuint uniID = glGetUniformLocation(shader->ID, "scale");
+
+    // Texture
+    int iImgWidth, iImgHeight, iNrColorChannels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* bytes = stbi_load("./src/resources/textures/blocks.png", &iImgWidth, &iImgHeight, &iNrColorChannels, 0);
+
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    // Texture settings
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+    float flatColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, flatColor);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, iImgWidth, iImgHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, bytes);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(bytes);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    GLuint tex0Uniform = glGetUniformLocation(shader->ID, "tex0");
+    shader->activate();
+    glUniform1i(tex0Uniform, 0);
 
     float fScale = 1.0f; // 0.0f;
     float tLast = 0.0f;
@@ -134,6 +172,8 @@ int main(int argc, char* argv[])
       // glUniform1f(uniID, abs(0.1f + sin(fScale)));
       glUniform1f(uniID, fScale);
 
+      glBindTexture(GL_TEXTURE_2D, texture);
+
       // Bind the VAO so OpenGL knows to use it
       VAO1.bind();
 
@@ -150,6 +190,7 @@ int main(int argc, char* argv[])
     VAO1.remove();
     VBO1.remove();
     EBO1.remove();
+    glDeleteTextures(1, &texture);
 
     // Free shader object
     shader->deactivate();
