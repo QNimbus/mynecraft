@@ -110,6 +110,12 @@ int main(int argc, char* argv[])
     VBO1.unbind();
     EBO1.unbind();
 
+    // Create/define uniform 'scale' for use in shader
+    GLuint uniID = glGetUniformLocation(shader->ID, "scale");
+
+    float fScale = 0.0f;
+    float tLast = 0.0f;
+
     // Main event loop
     while (!glfwWindowShouldClose(window))
     {
@@ -120,6 +126,14 @@ int main(int argc, char* argv[])
 
       // Tell OpenGL which Shader Program we want to use
       shader->activate();
+
+      if (glfwGetTime() - tLast > (1.0f / 60.0f)) {
+        fScale += 0.05f;
+        tLast = glfwGetTime();
+      }
+
+      // Initialize uniform value 'scale'
+      glUniform1f(uniID, abs(0.1f + sin(fScale)));
 
       // Bind the VAO so OpenGL knows to use it
       VAO1.bind();
