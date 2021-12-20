@@ -5,6 +5,7 @@
 #include <stb/stb_image.h>
 
 #include "gfx/shader/shader.h"
+#include "gfx/texture/texture.h"
 #include "gfx/shader/VAO.h"
 #include "gfx/shader/VBO.h"
 #include "gfx/shader/EBO.h"
@@ -16,12 +17,14 @@ using namespace std;
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 800
 
-#define TEXTURE_NR 16
+#define TEXTURE_NR 1
 #define TEXTURE_X1 (float) ((TEXTURE_NR % 16) * (float) 16/256)
 #define TEXTURE_X2 TEXTURE_X1 + (float) 16/256
 
 #define TEXTURE_Y2 (float) 1 - (TEXTURE_NR / 16 * (float) 16/256)
 #define TEXTURE_Y1 TEXTURE_Y2 - (float) 16/256
+
+constexpr double radians = 360 / 3.14159265358979323846;
 
 // Vertices for the triangles
 GLfloat vertices[] = {
@@ -40,10 +43,6 @@ GLuint indices[] = {
 
 int main(int argc, char* argv[])
 {
-  // Variables used in this scope
-  GLFWwindow* window;
-  Shader* shader;
-
   try
   {
 
@@ -62,7 +61,7 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Initialize window and check for success
-    window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Mynecraft", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Mynecraft", NULL, NULL);
     if (!window)
     {
       cout << "Failed to create GLFW window" << endl;
@@ -95,7 +94,7 @@ int main(int argc, char* argv[])
     glfwSwapBuffers(window);
 
     // Construct shader object
-    shader = new Shader("./src/resources/shaders/shader.vs", "./src/resources/shaders/shader.fs");
+    Shader shader("./src/resources/shaders/shader.vs", "./src/resources/shaders/shader.fs");
 
     // Generate vertex array object and bind it
     VAO VAO1;
@@ -116,41 +115,15 @@ int main(int argc, char* argv[])
     VBO1.unbind();
     EBO1.unbind();
 
-    // Create/define uniform 'scale' for use in shader
-    GLuint uniID = glGetUniformLocation(shader->ID, "scale");
-
-    // Texture
-    int iImgWidth, iImgHeight, iNrColorChannels;
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char* bytes = stbi_load("./src/resources/textures/blocks.png", &iImgWidth, &iImgHeight, &iNrColorChannels, 0);
-
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-
-    // Texture settings
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
-    float flatColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, flatColor);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, iImgWidth, iImgHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, bytes);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    stbi_image_free(bytes);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    GLuint tex0Uniform = glGetUniformLocation(shader->ID, "tex0");
-    shader->activate();
-    glUniform1i(tex0Uniform, 0);
-
     float fScale = 1.0f; // 0.0f;
     float tLast = 0.0f;
+
+    // Create/define uniform 'scale' for use in shader
+    GLuint uniID = glGetUniformLocation(shader.ID, "scale");
+
+    // Texture
+    Texture texture("./src/resources/textures/blocks.png", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGBA, GL_UNSIGNED_BYTE);
+    texture.texUnit(shader, "tex0", 0);
 
     // Main event loop
     while (!glfwWindowShouldClose(window))
@@ -161,18 +134,20 @@ int main(int argc, char* argv[])
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
       // Tell OpenGL which Shader Program we want to use
-      shader->activate();
+      shader.activate();
 
-      // if (glfwGetTime() - tLast > (1.0f / 60.0f)) {
-      //   fScale += 0.05f;
-      //   tLast = glfwGetTime();
-      // }
+      if (glfwGetTime() - tLast > (1.0f / 60.0f)) {
+        fScale += 0.05f;
+        fScale = fmod(fScale, radians);
+        tLast = glfwGetTime();
+      }
 
       // Initialize uniform value 'scale'
-      // glUniform1f(uniID, abs(0.1f + sin(fScale)));
-      glUniform1f(uniID, fScale);
+      glUniform1f(uniID, 0.2f + abs(sin(fScale)));
+      // glUniform1f(uniID, fScale);
 
-      glBindTexture(GL_TEXTURE_2D, texture);
+      // Binds texture so that is appears in rendering
+      texture.bind();
 
       // Bind the VAO so OpenGL knows to use it
       VAO1.bind();
@@ -190,10 +165,10 @@ int main(int argc, char* argv[])
     VAO1.remove();
     VBO1.remove();
     EBO1.remove();
-    glDeleteTextures(1, &texture);
+    // texture.remove();
 
     // Free shader object
-    shader->deactivate();
+    shader.deactivate();
 
     // Destruct window prior to ending program
     glfwDestroyWindow(window);
@@ -202,15 +177,9 @@ int main(int argc, char* argv[])
   }
   catch (string& e)
   {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
     cerr << e << endl;
 
-    // Free shader object
-    delete shader;
-
     return EXIT_FAILURE;
-#pragma GCC diagnostic pop
   }
 
   return EXIT_SUCCESS;

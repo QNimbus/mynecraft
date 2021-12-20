@@ -11,7 +11,7 @@ CFLAGS += -Wno-pointer-arith -Wno-newline-eof -Wno-unused-parameter -Wno-gnu-sta
 CFLAGS += -Wno-gnu-compound-literal-initializer -Wno-gnu-zero-variadic-macro-arguments
 CFLAGS += -Ilib/glad/include -Ilib/glfw/include
 
-CPPFLAGS = -std=c++14 -O3 -g -Wall -Wextra -Wpedantic -Wstrict-aliasing
+CPPFLAGS = -std=c++17 -O3 -g -Wall -Wextra -Wpedantic -Wstrict-aliasing
 CPPFLAGS += -Wno-pointer-arith -Wno-unused-parameter -Wno-unused
 CPPFLAGS += -Ilib -Ilib/glad/include -Ilib/glfw/include
 
