@@ -3,6 +3,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb/stb_image.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "gfx/shader/shader.h"
 #include "gfx/texture/texture.h"
@@ -10,12 +13,11 @@
 #include "gfx/shader/VBO.h"
 #include "gfx/shader/EBO.h"
 
+#include "gfx/camera/camera.h"
+
 using namespace std;
 
 #define APP_VERSION "0.1.1"
-
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 800
 
 #define TEXTURE_NR 1
 #define TEXTURE_X1 (float) ((TEXTURE_NR % 16) * (float) 16/256)
@@ -24,21 +26,42 @@ using namespace std;
 #define TEXTURE_Y2 (float) 1 - (TEXTURE_NR / 16 * (float) 16/256)
 #define TEXTURE_Y1 TEXTURE_Y2 - (float) 16/256
 
-constexpr double radians = 360 / 3.14159265358979323846;
+const unsigned int uiScreenWidth = 800;
+const unsigned int uiScreenHeight = 800;
 
 // Vertices for the triangles
 GLfloat vertices[] = {
-  // Coordinates ------- Colors ------------ Texture coordinates
-  -0.5f, -0.5f, 0.0f,    0.8f, 0.3f,  0.02f, TEXTURE_X1, TEXTURE_Y1,  // Lower left corner
-  -0.5f,  0.5f, 0.0f,    1.0f, 0.6f,  0.32f, TEXTURE_X1, TEXTURE_Y2,  // Upper left corner
-   0.5f,  0.5f, 0.0f,    1.0f, 0.6f,  0.32f, TEXTURE_X2, TEXTURE_Y2,  // Upper right corner
-   0.5f, -0.5f, 0.0f,    0.8f, 0.3f,  0.02f, TEXTURE_X2, TEXTURE_Y1,  // Lower right corner
+  // Coordinates ------- Colors ----------- Texture coordinates
+  -0.5f, -0.5f, -0.5f,    0.8f, 0.3f, 0.02f, TEXTURE_X1, TEXTURE_Y1,  // Front lower left corner  0 
+  -0.5f,  0.5f, -0.5f,    1.0f, 0.6f, 0.32f, TEXTURE_X1, TEXTURE_Y2,  // Front upper left corner  1
+   0.5f,  0.5f, -0.5f,    1.0f, 0.6f, 0.32f, TEXTURE_X2, TEXTURE_Y2,  // Front upper right corner 2
+   0.5f, -0.5f, -0.5f,    0.8f, 0.3f, 0.02f, TEXTURE_X2, TEXTURE_Y1,  // Front lower right corner 3
+
+  -0.5f, -0.5f,  0.5f,    0.8f, 0.3f, 0.02f, TEXTURE_X1, TEXTURE_Y1,  // Back lower left corner   4
+  -0.5f,  0.5f,  0.5f,    1.0f, 0.6f, 0.32f, TEXTURE_X1, TEXTURE_Y2,  // Back upper left corner   5
+   0.5f,  0.5f,  0.5f,    1.0f, 0.6f, 0.32f, TEXTURE_X2, TEXTURE_Y2,  // Back upper right corner  6
+   0.5f, -0.5f,  0.5f,    0.8f, 0.3f, 0.02f, TEXTURE_X2, TEXTURE_Y1,  // Back lower right corner  7
 };
 
 // Indices for the vertex ordering
 GLuint indices[] = {
-  0, 2, 1, // Lower triangle
-  0, 3, 2, // Upper triangle
+  0, 2, 1, // Front face - lower triangle
+  0, 3, 2, // Front face - Upper triangle
+
+  1, 5, 6, // Top face
+  1, 2, 6, // Top face
+
+  0, 3, 7, // Bottom face
+  0, 4, 7, // Bottom face
+
+  2, 3, 6, // Right face
+  3, 6, 7, // Right face
+
+  0, 4, 5, // Left face
+  0, 1, 5, // Left face
+
+  4, 5, 6, // Back face
+  4, 6, 7, // Back face
 };
 
 int main(int argc, char* argv[])
@@ -61,7 +84,7 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Initialize window and check for success
-    GLFWwindow* window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Mynecraft", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(uiScreenWidth, uiScreenHeight, "Mynecraft", NULL, NULL);
     if (!window)
     {
       cout << "Failed to create GLFW window" << endl;
@@ -84,7 +107,7 @@ int main(int argc, char* argv[])
     cout << "OpenGL version supported: " << version << endl << "--------------" << endl;
 
     // Configure the viewport used by OpenGL in the window
-    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    glViewport(0, 0, uiScreenWidth, uiScreenHeight);
 
     // Specify clear values for the color buffers
     glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
@@ -115,15 +138,20 @@ int main(int argc, char* argv[])
     VBO1.unbind();
     EBO1.unbind();
 
-    float fScale = 1.0f; // 0.0f;
-    float tLast = 0.0f;
-
     // Create/define uniform 'scale' for use in shader
     GLuint uniID = glGetUniformLocation(shader.ID, "scale");
 
-    // Texture
+    // Textures
     Texture texture("./src/resources/textures/blocks.png", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGBA, GL_UNSIGNED_BYTE);
     texture.texUnit(shader, "tex0", 0);
+
+    // Enables the Depth Buffer
+    glEnable(GL_DEPTH_TEST);
+
+    // Camera
+    Camera camera(uiScreenWidth, uiScreenHeight, glm::vec3(0.0f, 0.0f, 2.0f));
+
+    double lasttime = glfwGetTime();
 
     // Main event loop
     while (!glfwWindowShouldClose(window))
@@ -136,15 +164,8 @@ int main(int argc, char* argv[])
       // Tell OpenGL which Shader Program we want to use
       shader.activate();
 
-      if (glfwGetTime() - tLast > (1.0f / 60.0f)) {
-        fScale += 0.05f;
-        fScale = fmod(fScale, radians);
-        tLast = glfwGetTime();
-      }
-
-      // Initialize uniform value 'scale'
-      glUniform1f(uniID, 0.2f + abs(sin(fScale)));
-      // glUniform1f(uniID, fScale);
+      camera.Inputs(window);
+      camera.Matrix(90.0f, 0.1f, 100.0f, shader, "camMatrix");
 
       // Binds texture so that is appears in rendering
       texture.bind();
@@ -152,14 +173,21 @@ int main(int argc, char* argv[])
       // Bind the VAO so OpenGL knows to use it
       VAO1.bind();
 
+      // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
       // Draw primitives, number of indices, datatype of indices, index of indices
-      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+      glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(int), GL_UNSIGNED_INT, 0);
 
       // Swap the back buffer with the front buffer
       glfwSwapBuffers(window);
 
       // Handle all GLFW events
       glfwPollEvents();
+
+      while (glfwGetTime() < lasttime + 1.0 / 60) {
+        // TODO: Put the thread to sleep, yield, or simply do nothing
+      }
+      lasttime += 1.0 / 60;
     }
 
     VAO1.remove();

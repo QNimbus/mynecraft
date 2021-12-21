@@ -11,9 +11,9 @@ CFLAGS += -Wno-pointer-arith -Wno-newline-eof -Wno-unused-parameter -Wno-gnu-sta
 CFLAGS += -Wno-gnu-compound-literal-initializer -Wno-gnu-zero-variadic-macro-arguments
 CFLAGS += -Ilib/glad/include -Ilib/glfw/include
 
-CPPFLAGS = -std=c++17 -O3 -g -Wall -Wextra -Wpedantic -Wstrict-aliasing
+CPPFLAGS = -std=c++11 -O3 -g -Wall -Wextra -Wpedantic -Wstrict-aliasing
 CPPFLAGS += -Wno-pointer-arith -Wno-unused-parameter -Wno-unused
-CPPFLAGS += -Ilib -Ilib/glad/include -Ilib/glfw/include
+CPPFLAGS += -Ilib -Ilib/glad/include -Ilib/glfw/include -Ilib/glm
 
 LDFLAGS = lib/glad/src/glad.o lib/glfw/src/libglfw3.a -lm
 # LDFLAGS = lib/glad/src/glad.o lib/cglm/libcglm.a lib/glfw/src/libglfw3.a lib/noise/libnoise.a -lm
@@ -49,7 +49,7 @@ BIN = bin
 all: dirs libs game
 
 libs:
-# cd lib/cglm && cmake . -DCGLM_STATIC=ON && make
+# cd lib/glm && $(CMAKE) $(CMAKEFLAGS) . -DCGLM_STATIC=ON && $(MAKE)
 	cd lib/glad && $(CC) -o src/glad.o -Iinclude/ -c src/glad.c
 	cd lib/glfw && $(CMAKE) $(CMAKEFLAGS) . && $(MAKE)
 # cd lib/noise && make
